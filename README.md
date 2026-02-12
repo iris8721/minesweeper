@@ -1,1 +1,1 @@
-minesweeper raylib
+minesweeper for learning raylib quickly

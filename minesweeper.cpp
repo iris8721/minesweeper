@@ -4,12 +4,14 @@
 #include <ctime>
 #include <cstdlib>
 #include <fstream>
+#include <memory>
+#include <algorithm>
+#include <stdexcept>
 
 enum Difficulty {
     BEGINNER,
     INTERMEDIATE,
-    EXPERT,
-    MENU
+    EXPERT
 };
 
 struct DifficultyConfig {
@@ -50,6 +52,22 @@ struct BestTimes {
     BestTimes() : beginner(999), intermediate(999), expert(999) {}
 };
 
+BestTimes LoadBestTimesFromFile() {
+    BestTimes times;
+    std::ifstream file("minesweeper_times.txt");
+    if (file.is_open()) {
+        file >> times.beginner >> times.intermediate >> times.expert;
+    }
+    return times;
+}
+
+void SaveBestTimesToFile(const BestTimes& times) {
+    std::ofstream file("minesweeper_times.txt");
+    if (file.is_open()) {
+        file << times.beginner << " " << times.intermediate << " " << times.expert;
+    }
+}
+
 class Minesweeper {
 private:
     std::vector<std::vector<Cell>> grid;
@@ -74,20 +92,12 @@ private:
 
 
     void LoadBestTimes() {
-        std::ifstream file("minesweeper_times.txt");
-        if (file.is_open()) {
-            file >> bestTimes.beginner >> bestTimes.intermediate >> bestTimes.expert;
-            file.close();
-        }
+        bestTimes = LoadBestTimesFromFile();
     }
 
 
     void SaveBestTimes() {
-        std::ofstream file("minesweeper_times.txt");
-        if (file.is_open()) {
-            file << bestTimes.beginner << " " << bestTimes.intermediate << " " << bestTimes.expert;
-            file.close();
-        }
+        SaveBestTimesToFile(bestTimes);
     }
 
 
@@ -233,12 +243,16 @@ public:
         gridWidth = config.width;
         gridHeight = config.height;
         mineCount = config.mines;
+        if (mineCount >= gridWidth * gridHeight) {
+            throw std::runtime_error("Invalid difficulty config: mine count must be less than number of cells");
+        }
         InitGrid();
         LoadBestTimes();
     }
 
     void HandleClick(int mouseX, int mouseY, bool leftClick) {
         if (gameOver) return;
+        if (mouseY < TOP_BAR_HEIGHT) return;
 
 
         int gridX = mouseX / CELL_SIZE;
@@ -267,11 +281,11 @@ public:
 
             if (grid[gridY][gridX].state == HIDDEN) {
                 grid[gridY][gridX].state = FLAGGED;
-                remainingMines--;
+                remainingMines = std::clamp(remainingMines - 1, 0, mineCount);
             }
             else if (grid[gridY][gridX].state == FLAGGED) {
                 grid[gridY][gridX].state = HIDDEN;
-                remainingMines++;
+                remainingMines = std::clamp(remainingMines + 1, 0, mineCount);
             }
         }
     }
@@ -507,16 +521,12 @@ int main() {
     SetExitKey(0);
 
 
-    Difficulty currentState = MENU;
-    Minesweeper* game = nullptr;
+    bool inMenu = true;
+    Difficulty currentDifficulty = BEGINNER;
+    std::unique_ptr<Minesweeper> game;
 
 
-    BestTimes menuBestTimes;
-    std::ifstream file("minesweeper_times.txt");
-    if (file.is_open()) {
-        file >> menuBestTimes.beginner >> menuBestTimes.intermediate >> menuBestTimes.expert;
-        file.close();
-    }
+    BestTimes menuBestTimes = LoadBestTimesFromFile();
 
 
     MenuButton buttons[] = {
@@ -527,17 +537,15 @@ int main() {
 
 
     while (!WindowShouldClose()) {
-        if (currentState == MENU) {
+        if (inMenu) {
 
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 Vector2 mousePos = GetMousePosition();
                 for (int i = 0; i < 3; i++) {
                     if (CheckCollisionPointRec(mousePos, buttons[i].rect)) {
-                        currentState = buttons[i].difficulty;
-
-
-                        if (game != nullptr) delete game;
-                        game = new Minesweeper(currentState);
+                        currentDifficulty = buttons[i].difficulty;
+                        game = std::make_unique<Minesweeper>(currentDifficulty);
+                        inMenu = false;
 
 
                         SetWindowSize(game->GetWindowWidth(), game->GetWindowHeight());
@@ -570,15 +578,11 @@ int main() {
 
 
             if (IsKeyPressed(KEY_ESCAPE)) {
-                currentState = MENU;
+                inMenu = true;
                 SetWindowSize(MENU_WIDTH, MENU_HEIGHT);
 
 
-                std::ifstream file("minesweeper_times.txt");
-                if (file.is_open()) {
-                    file >> menuBestTimes.beginner >> menuBestTimes.intermediate >> menuBestTimes.expert;
-                    file.close();
-                }
+                menuBestTimes = LoadBestTimesFromFile();
             }
 
 
@@ -593,7 +597,6 @@ int main() {
     }
 
 
-    if (game != nullptr) delete game;
     CloseWindow();
 
     return 0;
