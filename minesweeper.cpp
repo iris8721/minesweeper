@@ -252,7 +252,7 @@ public:
 
     void HandleClick(int mouseX, int mouseY, bool leftClick) {
         if (gameOver) return;
-        if (mouseY < TOP_BAR_HEIGHT) return;
+        if (mouseX < 0 || mouseY < TOP_BAR_HEIGHT) return;
 
 
         int gridX = mouseX / CELL_SIZE;
@@ -265,15 +265,14 @@ public:
 
         if (leftClick) {
 
+            if (grid[gridY][gridX].state == FLAGGED) return;
+
             if (firstClick) {
                 PlaceMines(gridX, gridY);
                 firstClick = false;
                 startTime = GetTime();
                 timerRunning = true;
             }
-
-
-            if (grid[gridY][gridX].state == FLAGGED) return;
 
             RevealCell(gridX, gridY);
         }
