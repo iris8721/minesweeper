@@ -139,7 +139,7 @@ private:
             int y = rand() % gridHeight;
 
 
-            if ((x == avoidX && y == avoidY) || grid[y][x].isMine) {
+            if ((std::abs(x - avoidX) <= 1 && std::abs(y - avoidY) <= 1) || grid[y][x].isMine) {
                 continue;
             }
 
@@ -243,8 +243,8 @@ public:
         gridWidth = config.width;
         gridHeight = config.height;
         mineCount = config.mines;
-        if (mineCount >= gridWidth * gridHeight) {
-            throw std::runtime_error("Invalid difficulty config: mine count must be less than number of cells");
+        if (mineCount > gridWidth * gridHeight - 9) {
+            throw std::runtime_error("Invalid difficulty config: mine count must leave room for a safe first click");
         }
         InitGrid();
         LoadBestTimes();
