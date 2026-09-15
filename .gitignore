@@ -426,3 +426,5 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+# Runtime artifacts
+minesweeper_times.txt
