@@ -214,7 +214,7 @@ private:
     void RevealAllMines() {
         for (int y = 0; y < gridHeight; y++) {
             for (int x = 0; x < gridWidth; x++) {
-                if (grid[y][x].isMine) {
+                if (grid[y][x].isMine && grid[y][x].state == HIDDEN) {
                     grid[y][x].state = REVEALED;
                 }
             }
@@ -380,6 +380,10 @@ public:
                     Vector2 p2 = { (float)(posX + CELL_SIZE / 2), (float)(posY + 16) };
                     Vector2 p3 = { (float)(posX + CELL_SIZE - 8), (float)(posY + 11) };
                     DrawTriangle(p1, p3, p2, RED);
+                    if (gameOver && !cell.isMine) {
+                        DrawLine(posX + 4, posY + 4, posX + CELL_SIZE - 4, posY + CELL_SIZE - 4, RED);
+                        DrawLine(posX + CELL_SIZE - 4, posY + 4, posX + 4, posY + CELL_SIZE - 4, RED);
+                    }
                 }
             }
         }
