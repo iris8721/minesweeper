@@ -29,6 +29,8 @@ const DifficultyConfig DIFFICULTIES[] = {
 
 const int CELL_SIZE = 32;
 const int TOP_BAR_HEIGHT = 80;
+const int MAX_TIME = 999;
+const int NO_BEST_TIME = -1;
 
 enum CellState {
     HIDDEN,
@@ -49,14 +51,24 @@ struct BestTimes {
     int intermediate;
     int expert;
 
-    BestTimes() : beginner(999), intermediate(999), expert(999) {}
+    BestTimes() : beginner(NO_BEST_TIME), intermediate(NO_BEST_TIME), expert(NO_BEST_TIME) {}
 };
+
+int ReadBestTime(std::ifstream& file) {
+    int value;
+    if (!(file >> value) || value < 0 || value > MAX_TIME) {
+        return NO_BEST_TIME;
+    }
+    return value;
+}
 
 BestTimes LoadBestTimesFromFile() {
     BestTimes times;
     std::ifstream file("minesweeper_times.txt");
     if (file.is_open()) {
-        file >> times.beginner >> times.intermediate >> times.expert;
+        times.beginner = ReadBestTime(file);
+        times.intermediate = ReadBestTime(file);
+        times.expert = ReadBestTime(file);
     }
     return times;
 }
@@ -86,6 +98,7 @@ private:
     double currentTime;
     int elapsedSeconds;
     bool timerRunning;
+    bool newBestTime;
 
 
     BestTimes bestTimes;
@@ -101,19 +114,21 @@ private:
     }
 
 
-    void UpdateBestTime() {
+    bool UpdateBestTime() {
         int* bestTime = nullptr;
         switch (currentDifficulty) {
         case BEGINNER: bestTime = &bestTimes.beginner; break;
         case INTERMEDIATE: bestTime = &bestTimes.intermediate; break;
         case EXPERT: bestTime = &bestTimes.expert; break;
-        default: return;
+        default: return false;
         }
 
-        if (elapsedSeconds < *bestTime) {
+        if (*bestTime == NO_BEST_TIME || elapsedSeconds < *bestTime) {
             *bestTime = elapsedSeconds;
             SaveBestTimes();
+            return true;
         }
+        return false;
     }
 
 
@@ -129,6 +144,7 @@ private:
         currentTime = 0;
         elapsedSeconds = 0;
         timerRunning = false;
+        newBestTime = false;
     }
 
 
@@ -206,7 +222,7 @@ private:
             gameWon = true;
             gameOver = true;
             timerRunning = false;
-            UpdateBestTime();
+            newBestTime = UpdateBestTime();
         }
     }
 
@@ -313,7 +329,7 @@ public:
         DrawText(TextFormat("Time: %03d", elapsedSeconds), 10, 45, 28, YELLOW);
 
 
-        int bestTime = 999;
+        int bestTime = NO_BEST_TIME;
         switch (currentDifficulty) {
         case BEGINNER: bestTime = bestTimes.beginner; break;
         case INTERMEDIATE: bestTime = bestTimes.intermediate; break;
@@ -321,7 +337,7 @@ public:
         default: break;
         }
         const char* bestTimeText;
-        if (bestTime == 999) {
+        if (bestTime == NO_BEST_TIME) {
             bestTimeText = "Best: ---";
         }
         else {
@@ -411,15 +427,7 @@ public:
                 message = "YOU WIN!";
                 messageColor = GREEN;
 
-                int* bestTime = nullptr;
-                switch (currentDifficulty) {
-                case BEGINNER: bestTime = &bestTimes.beginner; break;
-                case INTERMEDIATE: bestTime = &bestTimes.intermediate; break;
-                case EXPERT: bestTime = &bestTimes.expert; break;
-                default: break;
-                }
-
-                if (bestTime && elapsedSeconds == *bestTime) {
+                if (newBestTime) {
                     const char* newBestText = "NEW BEST TIME!";
                     int newBestWidth = MeasureText(newBestText, 24);
                     DrawText(newBestText, popupX + popupWidth / 2 - newBestWidth / 2, popupY + 80, 24, GOLD);
