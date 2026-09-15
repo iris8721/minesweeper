@@ -3,6 +3,7 @@
 #include <vector>
 #include <ctime>
 #include <cstdlib>
+#include <cstdio>
 #include <fstream>
 #include <memory>
 #include <algorithm>
@@ -480,9 +481,17 @@ struct MenuButton {
     Difficulty difficulty;
 };
 
+void FormatBestTime(char* buffer, size_t size, const char* label, int time) {
+    if (time == NO_BEST_TIME) {
+        snprintf(buffer, size, "%s: ---", label);
+    }
+    else {
+        snprintf(buffer, size, "%s: %d sec", label, time);
+    }
+}
+
 void DrawMenu(const MenuButton* buttons, int buttonCount, const BestTimes& bestTimes) {
     const int WINDOW_WIDTH = 400;
-    const int WINDOW_HEIGHT = 500;
 
     ClearBackground(DARKGRAY);
 
@@ -511,9 +520,10 @@ void DrawMenu(const MenuButton* buttons, int buttonCount, const BestTimes& bestT
 
     DrawText("BEST TIMES", WINDOW_WIDTH / 2 - MeasureText("BEST TIMES", 28) / 2, 360, 28, YELLOW);
 
-    const char* beginnerTime = (bestTimes.beginner == 999) ? "Beginner: ---" : TextFormat("Beginner: %d sec", bestTimes.beginner);
-    const char* intermediateTime = (bestTimes.intermediate == 999) ? "Intermediate: ---" : TextFormat("Intermediate: %d sec", bestTimes.intermediate);
-    const char* expertTime = (bestTimes.expert == 999) ? "Expert: ---" : TextFormat("Expert: %d sec", bestTimes.expert);
+    char beginnerTime[32], intermediateTime[32], expertTime[32];
+    FormatBestTime(beginnerTime, sizeof(beginnerTime), "Beginner", bestTimes.beginner);
+    FormatBestTime(intermediateTime, sizeof(intermediateTime), "Intermediate", bestTimes.intermediate);
+    FormatBestTime(expertTime, sizeof(expertTime), "Expert", bestTimes.expert);
 
     DrawText(beginnerTime, 50, 405, 20, WHITE);
     DrawText(intermediateTime, 50, 435, 20, WHITE);
